@@ -279,6 +279,8 @@ if(MATERIALX_BUILD_RENDER)
     add_subdirectory(resources)
 endif()
 
+add_subdirectory(source/zsw_test)
+
 # Add test subdirectory
 if(MATERIALX_BUILD_TESTS)
     add_subdirectory(source/MaterialXTest)

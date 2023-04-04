@@ -67,7 +67,7 @@ mx::FileSearchPath getDefaultSearchPath()
 {
     mx::FilePath modulePath = mx::FilePath::getModulePath();
     mx::FilePath installRootPath = modulePath.getParentPath();
-    mx::FilePath devRootPath = installRootPath.getParentPath().getParentPath();
+    mx::FilePath devRootPath = installRootPath.getParentPath();
 
     mx::FileSearchPath searchPath;
     if ((devRootPath / "libraries").exists())
