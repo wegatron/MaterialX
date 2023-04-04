@@ -7,8 +7,9 @@
 
 ZswRender::ZswRender() 
     : context_(mx::GlslShaderGenerator::create()), 
-    image_handler_(mx::GLTextureHandler::create(mx::StbImageLoader::create())), 
-    light_handler_(mx::LightHandler::create())
+      image_handler_(mx::GLTextureHandler::create(mx::StbImageLoader::create())), 
+      light_handler_(mx::LightHandler::create()),
+      direct_light_doc_(nullptr)
 {
 
 }
@@ -20,7 +21,8 @@ void ZswRender::loadGeometry(const std::string &geometry_file)
 
 void ZswRender::loadEnvironmentLight(
                                      const std::string &env_radiance_file,
-                                     const std::string &env_irradiance_file)
+                                     const std::string &env_irradiance_file,
+                                     const std::string &direct_light_file)
 {
     mx::ImagePtr env_radiance_map = image_handler_->acquireImage(env_radiance_file);
     if(!env_radiance_map) {
@@ -38,6 +40,11 @@ void ZswRender::loadEnvironmentLight(
     image_handler_->releaseRenderResources(light_handler_->getEnvIrradianceMap());
     light_handler_->setEnvRadianceMap(env_radiance_map);
     light_handler_->setEnvIrradianceMap(env_irradiance_map);
+
+    if(!direct_light_file.empty()) {
+        direct_light_doc_ = mx::createDocument();
+        mx::readFromXmlFile(direct_light_doc_, direct_light_doc_);
+    } else direct_light_doc_ = nullptr;
 }
 
 void ZswRender::loadMaterial(const std::string &material_file)
@@ -158,4 +165,5 @@ void ZswRender::renderFrame()
 
     // update lighting state    
     //light_handler_->setLightTransform(mx::Matrix44::createRotationY(lightRotation / 180.0f * PI));
+    
 }

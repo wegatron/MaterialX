@@ -20,7 +20,8 @@ class ZswRender
 
     void loadEnvironmentLight(
                               const std::string &env_radiance_file,
-                              const std::string &env_irradiance_file);
+                              const std::string &env_irradiance_file,
+                              const std::string &direct_light_file);
 
     void loadGeometry(const std::string &geometry_file);
 
@@ -35,6 +36,8 @@ private:
     mx::GeometryHandlerPtr geometry_handler_;
     mx::ImageHandlerPtr image_handler_;
     mx::LightHandlerPtr light_handler_;
+
+    mx::DocumentPtr direct_light_doc_;
 
     mx::CameraPtr view_camera_;
 };
