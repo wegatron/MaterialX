@@ -1,6 +1,14 @@
 add_definitions(${MATERIALXVIEW_RENDER_BACKEND_DEFINITIONS})
 
-add_executable(zsw_test zsw_render.h zsw_render.cpp main.cpp)
+include_directories(
+  /home/wegatron/win-data/opensource_code/MaterialX/source/MaterialXView/NanoGUI/ext/glfw/deps
+)
+set(GLFW_LIBRARIES /usr/lib/x86_64-linux-gnu/libglfw.so)
+
+file(GLOB headers *.h)
+file(GLOB sources *.cpp)
+
+add_executable(zsw_test ${headers} ${sources})
 
 set(MATERIALX_LIBRARIES
     MaterialXFormat
@@ -12,4 +20,5 @@ set(MATERIALX_LIBRARIES
 target_link_libraries(
   zsw_test
   ${MATERIALX_LIBRARIES}
+  ${GLFW_LIBRARIES}
 )

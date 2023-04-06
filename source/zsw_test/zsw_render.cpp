@@ -4,14 +4,20 @@
 
 #include <MaterialXRender/StbImageLoader.h>
 #include <MaterialXRenderGlsl/GLTextureHandler.h>
+#include <MaterialXRender/TinyObjLoader.h>
+#include <MaterialXRender/CgltfLoader.h>
 
 ZswRender::ZswRender() 
-    : context_(mx::GlslShaderGenerator::create()), 
+    : context_(mx::GlslShaderGenerator::create()),
+      geometry_handler_(mx::GeometryHandler::create()),
       image_handler_(mx::GLTextureHandler::create(mx::StbImageLoader::create())), 
       light_handler_(mx::LightHandler::create()),
       direct_light_doc_(nullptr)
 {
-
+    mx::TinyObjLoaderPtr obj_loader = mx::TinyObjLoader::create();
+    mx::CgltfLoaderPtr gltf_loader = mx::CgltfLoader::create();
+    geometry_handler_->addLoader(obj_loader);
+    geometry_handler_->addLoader(gltf_loader);
 }
 
 void ZswRender::loadGeometry(const std::string &geometry_file)
@@ -43,7 +49,7 @@ void ZswRender::loadEnvironmentLight(
 
     if(!direct_light_file.empty()) {
         direct_light_doc_ = mx::createDocument();
-        mx::readFromXmlFile(direct_light_doc_, direct_light_doc_);
+        mx::readFromXmlFile(direct_light_doc_, direct_light_file);
     } else direct_light_doc_ = nullptr;
 }
 
@@ -59,7 +65,7 @@ void ZswRender::loadMaterial(const std::string &material_file)
         std::cerr << "*** Validation warnings for " << material_file << " ***" << std::endl;
         std::cerr << message;
         std::throw_with_nested(std::runtime_error("Validation errors found."));
-    }    
+    }
 
     std::vector<mx::TypedElementPtr> elems = mx::findRenderableElements(doc);
     std::vector<mx::NodePtr> materialNodes;
