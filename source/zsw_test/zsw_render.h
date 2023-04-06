@@ -16,6 +16,8 @@ class ZswRender
  public:
     ZswRender();
 
+    bool loadStdLibs(const std::string &libraries_search_path);
+    
     void loadMaterial(const std::string &material_file);
 
     void loadEnvironmentLight(
@@ -38,6 +40,9 @@ private:
     mx::LightHandlerPtr light_handler_;
 
     mx::DocumentPtr direct_light_doc_;
-
+    mx::DocumentPtr std_lib_;
     mx::CameraPtr view_camera_;
+
+    // scene options
+    
 };

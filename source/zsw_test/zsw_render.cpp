@@ -7,6 +7,8 @@
 #include <MaterialXRender/TinyObjLoader.h>
 #include <MaterialXRender/CgltfLoader.h>
 
+#include <MaterialXGenShader/DefaultColorManagementSystem.h>
+
 ZswRender::ZswRender() 
     : context_(mx::GlslShaderGenerator::create()),
       geometry_handler_(mx::GeometryHandler::create()),
@@ -19,6 +21,47 @@ ZswRender::ZswRender()
     geometry_handler_->addLoader(obj_loader);
     geometry_handler_->addLoader(gltf_loader);
 }
+
+bool ZswRender::loadStdLibs(const std::string &libraries_search_path)
+{
+    // load standard libraries
+    std_lib_ = mx::createDocument();
+    auto include_files = mx::loadLibraries(
+                                           {"libraries"},
+                                           mx::FileSearchPath(libraries_search_path),
+                                           std_lib_);
+    if(include_files.empty()) {
+        std::cerr << "Could not find standard data libraries on the given search path: "
+                  << libraries_search_path
+                  << std::endl;
+        return false;
+    }
+
+    // init context
+    // Initialize color management.
+    mx::DefaultColorManagementSystemPtr cms = mx::DefaultColorManagementSystem::create(context_.getShaderGenerator().getTarget());
+    cms->loadLibrary(std_lib_);
+    context_.getShaderGenerator().setColorManagementSystem(cms);
+
+    // Initialize unit management.
+    mx::UnitSystemPtr unit_system = mx::UnitSystem::create(context_.getShaderGenerator().getTarget());
+    unit_system->loadLibrary(std_lib_);
+
+    // unit registry
+    mx::UnitTypeDefPtr distanceTypeDef = std_lib_->getUnitTypeDef("distance");
+    auto distance_converter = mx::LinearUnitConverter::create(distanceTypeDef);
+    auto unit_registry = mx::UnitConverterRegistry::create();
+    unit_registry->addUnitConverter(distanceTypeDef, distance_converter);
+    mx::UnitTypeDefPtr angleTypeDef = std_lib_->getUnitTypeDef("angle");
+    mx::LinearUnitConverterPtr angleConverter = mx::LinearUnitConverter::create(angleTypeDef);
+    unit_registry->addUnitConverter(angleTypeDef, angleConverter);
+    
+    unit_system->setUnitConverterRegistry(unit_registry);
+    context_.getShaderGenerator().setUnitSystem(unit_system);
+    context_.getOptions().targetDistanceUnit = "meter";
+    return true;
+}
+
 
 void ZswRender::loadGeometry(const std::string &geometry_file)
 {
@@ -57,6 +100,18 @@ void ZswRender::loadMaterial(const std::string &material_file)
 {
     mx::DocumentPtr doc = mx::createDocument();
     mx::readFromXmlFile(doc, material_file);
+
+    // load standard libraries, materials may depends on that
+    doc->importLibrary(std_lib_);
+    
+    // apply direct light
+    if(direct_light_doc_) {
+        doc->importLibrary(direct_light_doc_);
+        std::vector<mx::NodePtr> lights;
+        light_handler_->findLights(doc, lights);
+        light_handler_->registerLights(doc, lights, context_);
+        light_handler_->setLightSources(lights);
+    }
 
     // Validate the document.
     std::string message;
