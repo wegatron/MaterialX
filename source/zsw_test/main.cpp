@@ -25,6 +25,8 @@ int main(int argc, char * argv[])
     std::string direct_light_file = "/home/wegatron/win-data/opensource_code/MaterialX/resources/Lights/san_giuseppe_bridge_split.mtlx";    
     ZswRender zsw_render;
 
+    zsw_render.setViewSize(properties.extent.width, properties.extent.height);
+
     zsw_render.loadStdLibs("/home/wegatron/win-data/opensource_code/MaterialX");
 
     // load environment light before material
@@ -33,7 +35,14 @@ int main(int argc, char * argv[])
 
     zsw_render.loadGeometry(geometry_file);
 
-    // render frame
-    std::cout << "finish" << std::endl;    
+    window.setWindowSizeCallback([&zsw_render](int width, int height){ zsw_render.setViewSize(width, height); });    
+
+    while (!window.should_close()) {
+        window.process_events();
+        zsw_render.renderFrame();
+        glfwSwapBuffers(reinterpret_cast<GLFWwindow*>(window.get_handle()));
+    }
+    
+    std::cout << "finish" << std::endl;
     return 0;
 }

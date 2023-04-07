@@ -30,7 +30,13 @@ class ZswRender
     // render frame in opengl environment
     void renderFrame();
 
+    void setViewSize(uint32_t width, uint32_t height);
+
 private:
+
+    void resetViewCamera();
+    
+    void updateViewCamera();
 
     std::vector<mx::MaterialPtr> materials_;
     mx::GenContext context_;
@@ -38,11 +44,11 @@ private:
     mx::GeometryHandlerPtr geometry_handler_;
     mx::ImageHandlerPtr image_handler_;
     mx::LightHandlerPtr light_handler_;
+    mx::ShadowState shadow_state_;    
 
+    mx::FileSearchPath search_path_;
     mx::DocumentPtr direct_light_doc_;
     mx::DocumentPtr std_lib_;
-    mx::CameraPtr view_camera_;
-
-    // scene options
     
+    mx::CameraPtr view_camera_;
 };

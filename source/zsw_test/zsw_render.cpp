@@ -2,19 +2,28 @@
 
 #include <iostream>
 
+#define _USE_MATH_DEFINES
+#include <math.h>
+#include <glad/gl.h>
+#include <cassert>
+
 #include <MaterialXRender/StbImageLoader.h>
 #include <MaterialXRenderGlsl/GLTextureHandler.h>
 #include <MaterialXRender/TinyObjLoader.h>
 #include <MaterialXRender/CgltfLoader.h>
+#include <MaterialXRenderGlsl/GlslMaterial.h>
 
 #include <MaterialXGenShader/DefaultColorManagementSystem.h>
+
+const float camera_view_angle = 45.0f;
 
 ZswRender::ZswRender() 
     : context_(mx::GlslShaderGenerator::create()),
       geometry_handler_(mx::GeometryHandler::create()),
       image_handler_(mx::GLTextureHandler::create(mx::StbImageLoader::create())), 
       light_handler_(mx::LightHandler::create()),
-      direct_light_doc_(nullptr)
+      direct_light_doc_(nullptr),
+      view_camera_(mx::Camera::create())
 {
     mx::TinyObjLoaderPtr obj_loader = mx::TinyObjLoader::create();
     mx::CgltfLoaderPtr gltf_loader = mx::CgltfLoader::create();
@@ -66,6 +75,38 @@ bool ZswRender::loadStdLibs(const std::string &libraries_search_path)
 void ZswRender::loadGeometry(const std::string &geometry_file)
 {
     geometry_handler_->loadGeometry(geometry_file);
+    resetViewCamera();
+}
+
+void ZswRender::resetViewCamera()
+{
+    const mx::Vector3& box_max = geometry_handler_->getMaximumBounds();
+    const mx::Vector3& box_min = geometry_handler_->getMinimumBounds();
+    mx::Vector3 center = (box_max + box_min) * 0.5f;
+
+    const float radius = (center - box_min).getMagnitude();
+    float distance = radius * 2.5f;
+    mx::Vector3 view_camera_position(center[0], center[1], center[2]+distance);
+    auto view_matrix = mx::Camera::createViewMatrix(view_camera_position, center, mx::Vector3(0.0f, 1.0f, 0.0f));
+    view_camera_->setViewMatrix(view_matrix);
+    
+    float near = radius;
+    float far = radius * 3.5f;
+    float fH = std::tan(camera_view_angle/360.0f * M_PI) * near;
+    auto view_size = view_camera_->getViewportSize();    
+    float fW = fH * view_size[0]/view_size[1];
+    // for opengl z is [-1, 1]    
+    auto projection_matrix = mx::Camera::createPerspectiveMatrix(-fW, fW, -fH, fH, near, far);
+    view_camera_->setProjectionMatrix(projection_matrix);
+}
+
+void ZswRender::updateViewCamera()
+{
+}
+
+void ZswRender::setViewSize(uint32_t width, uint32_t height)
+{
+    view_camera_->setViewportSize(mx::Vector2(static_cast<float>(width), static_cast<float>(height)));
 }
 
 void ZswRender::loadEnvironmentLight(
@@ -216,15 +257,36 @@ void ZswRender::loadMaterial(const std::string &material_file)
 void ZswRender::renderFrame()
 {
     // initialize opengl state
-    // glDisable(GL_BLEND);
-    // glEnable(GL_DEPTH_TEST);
-    // glDepthMask(GL_TRUE);
-    // glDepthFunc(GL_LEQUAL);
-    // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    // glDisable(GL_CULL_FACE);
-    // glDisable(GL_FRAMEBUFFER_SRGB);
+    glDisable(GL_BLEND);
+    glEnable(GL_DEPTH_TEST);
+    glDepthMask(GL_TRUE);
+    glDepthFunc(GL_LEQUAL);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_FRAMEBUFFER_SRGB);
 
-    // update lighting state    
-    //light_handler_->setLightTransform(mx::Matrix44::createRotationY(lightRotation / 180.0f * PI));
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+    //// update lighting state
+    assert(!materials_.empty());
+    auto mat = std::static_pointer_cast<mx::GlslMaterial>(materials_[0]);
+    mat->bindShader();
+    if (mat->getProgram()->hasUniform(mx::HW::ALPHA_THRESHOLD)) {
+        mat->getProgram()->bindUniform(mx::HW::ALPHA_THRESHOLD, mx::Value::createValue(0.001f));
+    }        
     
+    auto mesh_list = geometry_handler_->getMeshes();
+    for(auto mesh : mesh_list) {
+        mat->bindMesh(mesh);
+
+        mat->bindViewInformation(view_camera_);
+        mat->bindLighting(light_handler_, image_handler_, shadow_state_);
+        mat->bindImages(image_handler_, search_path_);
+        for (size_t i = 0; i < mesh->getPartitionCount(); i++) {
+            mx::MeshPartitionPtr geom = mesh->getPartition(i);
+            mat->drawPartition(geom);
+        }
+        
+        mat->unbindImages(image_handler_);
+    }
 }
