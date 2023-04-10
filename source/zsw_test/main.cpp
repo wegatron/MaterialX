@@ -23,11 +23,11 @@ int main(int argc, char * argv[])
     std::string env_irradiance_file = "/home/wegatron/win-data/opensource_code/MaterialX/resources/Lights/irradiance/san_giuseppe_bridge_split.hdr";
     std::string geometry_file = "/home/wegatron/win-data/opensource_code/MaterialX/resources/Geometry/shaderball.glb";
     std::string direct_light_file = "/home/wegatron/win-data/opensource_code/MaterialX/resources/Lights/san_giuseppe_bridge_split.mtlx";    
-    ZswRender zsw_render;
+    ZswRender zsw_render("/home/wegatron/win-data/opensource_code/MaterialX");
 
     zsw_render.setViewSize(properties.extent.width, properties.extent.height);
 
-    zsw_render.loadStdLibs("/home/wegatron/win-data/opensource_code/MaterialX");
+    zsw_render.loadStdLibs();
 
     // load environment light before material
     zsw_render.loadEnvironmentLight(env_radiance_file, env_irradiance_file, direct_light_file);

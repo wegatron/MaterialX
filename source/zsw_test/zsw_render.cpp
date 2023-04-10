@@ -17,32 +17,33 @@
 
 const float camera_view_angle = 45.0f;
 
-ZswRender::ZswRender() 
-    : context_(mx::GlslShaderGenerator::create()),
+ZswRender::ZswRender(const std::string &search_path) 
+    : search_path_(search_path),
+      context_(mx::GlslShaderGenerator::create()),
       geometry_handler_(mx::GeometryHandler::create()),
       image_handler_(mx::GLTextureHandler::create(mx::StbImageLoader::create())), 
       light_handler_(mx::LightHandler::create()),
       direct_light_doc_(nullptr),
       view_camera_(mx::Camera::create())
 {
+    context_.registerSourceCodeSearchPath(search_path_);
     mx::TinyObjLoaderPtr obj_loader = mx::TinyObjLoader::create();
     mx::CgltfLoaderPtr gltf_loader = mx::CgltfLoader::create();
     geometry_handler_->addLoader(obj_loader);
     geometry_handler_->addLoader(gltf_loader);
 }
 
-bool ZswRender::loadStdLibs(const std::string &libraries_search_path)
+bool ZswRender::loadStdLibs()
 {
     // load standard libraries
     std_lib_ = mx::createDocument();
     auto include_files = mx::loadLibraries(
                                            {"libraries"},
-                                           mx::FileSearchPath(libraries_search_path),
+                                           search_path_,
                                            std_lib_);
     if(include_files.empty()) {
-        std::cerr << "Could not find standard data libraries on the given search path: "
-                  << libraries_search_path
-                  << std::endl;
+        std::cerr << "Could not find standard data libraries on the given search path: " 
+                  <<  search_path_.asString() << std::endl;
         return false;
     }
 
@@ -140,7 +141,23 @@ void ZswRender::loadEnvironmentLight(
 void ZswRender::loadMaterial(const std::string &material_file)
 {
     mx::DocumentPtr doc = mx::createDocument();
-    mx::readFromXmlFile(doc, material_file);
+
+    mx::XmlReadOptions readOptions;
+    readOptions.readXIncludeFunction = [](mx::DocumentPtr doc, const mx::FilePath& filename,
+                                          const mx::FileSearchPath& searchPath, const mx::XmlReadOptions* options)
+    {
+        mx::FilePath resolvedFilename = searchPath.find(filename);
+        if (resolvedFilename.exists())
+        {
+            readFromXmlFile(doc, resolvedFilename, searchPath, options);
+        }
+        else
+        {
+            std::cerr << "Include file not found: " << filename.asString() << std::endl;
+        }
+    };
+    mx::FileSearchPath search_path("/home/wegatron/win-data/opensource_code/MaterialX");
+    mx::readFromXmlFile(doc, material_file, search_path, &readOptions);
 
     // load standard libraries, materials may depends on that
     doc->importLibrary(std_lib_);

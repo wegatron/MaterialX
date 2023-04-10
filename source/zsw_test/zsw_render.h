@@ -14,9 +14,9 @@ namespace mx = MaterialX;
 class ZswRender
 {
  public:
-    ZswRender();
+    ZswRender(const std::string &search_path);
 
-    bool loadStdLibs(const std::string &libraries_search_path);
+    bool loadStdLibs();
     
     void loadMaterial(const std::string &material_file);
 
@@ -38,15 +38,16 @@ private:
     
     void updateViewCamera();
 
-    std::vector<mx::MaterialPtr> materials_;
+    mx::FileSearchPath search_path_;
     mx::GenContext context_;
+
+    std::vector<mx::MaterialPtr> materials_;
 
     mx::GeometryHandlerPtr geometry_handler_;
     mx::ImageHandlerPtr image_handler_;
     mx::LightHandlerPtr light_handler_;
     mx::ShadowState shadow_state_;    
 
-    mx::FileSearchPath search_path_;
     mx::DocumentPtr direct_light_doc_;
     mx::DocumentPtr std_lib_;
     
